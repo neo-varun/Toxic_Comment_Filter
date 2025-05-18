@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Toxic Comment Classifier</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7; }
+        .container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px #ccc; max-width: 500px; margin: auto; }
+        button { padding: 10px 20px; margin: 10px 0; font-size: 16px; border-radius: 5px; border: none; background: #007bff; color: #fff; cursor: pointer; }
+        button:disabled { background: #aaa; }
+        .metrics { margin-top: 20px; }
+        .status { margin-top: 10px; color: #007bff; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>Toxic Comment Classifier</h2>
+    <button id="trainBtn">Train Model</button>
+    <button id="metricsBtn">View Metrics</button>
+    <button id="optimizeBtn">Optimize Model</button>
+    <div class="status" id="status"></div>
+    <div class="metrics" id="metrics"></div>
+
+    <div style="margin-top: 30px;">
+        <label for="modelSelect"><b>Select Model:</b></label>
+        <select id="modelSelect">
+            <option value="pytorch">PyTorch</option>
+            <option value="onnx">ONNX</option>
+        </select>
+    </div>
+    <div style="margin-top: 10px;">
+        <label for="predictInput"><b>Enter Comment:</b></label><br>
+        <textarea id="predictInput" rows="3" style="width: 100%;"></textarea>
+    </div>
+    <button id="predictBtn">Predict</button>
+    <div class="status" id="predictStatus"></div>
+    <div class="metrics" id="predictResult"></div>
+</div>
+<script>
+    const trainBtn = document.getElementById('trainBtn');
+    const metricsBtn = document.getElementById('metricsBtn');
+    const optimizeBtn = document.getElementById('optimizeBtn');
+    const statusDiv = document.getElementById('status');
+    const metricsDiv = document.getElementById('metrics');
+
+    trainBtn.onclick = function() {
+        statusDiv.textContent = 'Starting training...';
+        metricsDiv.textContent = '';
+        trainBtn.disabled = true;
+        fetch('/train', {method: 'POST'})
+            .then(res => res.json())
+            .then(data => {
+                statusDiv.textContent = data.message;
+                if (data.status === 'started') {
+                    pollStatus();
+                } else {
+                    trainBtn.disabled = false;
+                }
+            });
+    };
+
+    function pollStatus() {
+        fetch('/status')
+            .then(res => res.json())
+            .then(data => {
+                statusDiv.textContent = data.message;
+                if (data.running) {
+                    setTimeout(pollStatus, 2000);
+                } else {
+                    trainBtn.disabled = false;
+                }
+            });
+    }
+
+    metricsBtn.onclick = function() {
+        statusDiv.textContent = '';
+        metricsDiv.textContent = 'Loading metrics...';
+        fetch('/metrics')
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    const m = data.metrics;
+                    metricsDiv.innerHTML = `<b>Accuracy:</b> ${m.accuracy}<br>
+                        <b>Precision:</b> ${m.precision}<br>
+                        <b>Recall:</b> ${m.recall}<br>
+                        <b>F1 Score:</b> ${m.f1_score}`;
+                } else {
+                    metricsDiv.textContent = data.message;
+                }
+            });
+    };
+
+    optimizeBtn.onclick = function() {
+        statusDiv.textContent = 'Starting model optimization...';
+        metricsDiv.textContent = '';
+        optimizeBtn.disabled = true;
+        fetch('/optimize', {method: 'POST'})
+            .then(res => res.json())
+            .then(data => {
+                statusDiv.textContent = data.message;
+                if (data.status === 'started') {
+                    pollOptimizationStatus();
+                } else {
+                    optimizeBtn.disabled = false;
+                }
+            });
+    };
+
+    function pollOptimizationStatus() {
+        fetch('/optimization_status')
+            .then(res => res.json())
+            .then(data => {
+                statusDiv.textContent = data.message;
+                if (data.running) {
+                    setTimeout(pollOptimizationStatus, 2000);
+                } else {
+                    optimizeBtn.disabled = false;
+                    if (data.result) {
+                        metricsDiv.innerHTML = `<b>Original Model Path:</b> ${data.result.original_model_path}<br>
+                            <b>Optimized Model Path:</b> ${data.result.optimized_model_path}<br>
+                            <b>ONNX Path:</b> ${data.result.onnx_path}<br>
+                            <b>Original Size (MB):</b> ${data.result.original_size_mb.toFixed(2)}`;
+                    }
+                }
+            });
+    }
+
+    const predictBtn = document.getElementById('predictBtn');
+    const predictInput = document.getElementById('predictInput');
+    const modelSelect = document.getElementById('modelSelect');
+    const predictStatus = document.getElementById('predictStatus');
+    const predictResult = document.getElementById('predictResult');
+
+    predictBtn.onclick = function() {
+        const text = predictInput.value.trim();
+        const model = modelSelect.value;
+        if (!text) {
+            predictStatus.textContent = 'Please enter a comment.';
+            return;
+        }
+        predictStatus.textContent = 'Predicting...';
+        predictResult.textContent = '';
+        predictBtn.disabled = true;
+        fetch('/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, model })
+        })
+        .then(res => res.json())
+        .then(data => {
+            predictStatus.textContent = data.message || '';
+            if (data.status === 'ok') {
+                let html = '';
+                for (const [label, prob] of Object.entries(data.prediction)) {
+                    html += `<b>${label}:</b> ${prob}<br>`;
+                }
+                predictResult.innerHTML = html;
+            } else {
+                predictResult.textContent = data.error || data.message;
+            }
+            predictBtn.disabled = false;
+        })
+        .catch(() => {
+            predictStatus.textContent = 'Prediction failed.';
+            predictBtn.disabled = false;
+        });
+    };
+</script>
+</body>
+</html>
