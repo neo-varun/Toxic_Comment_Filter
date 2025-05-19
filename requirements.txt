@@ -1,0 +1,8 @@
+flask
+transformers
+torch
+scikit-learn
+pandas
+numpy
+tqdm
+onnxruntime

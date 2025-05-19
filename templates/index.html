@@ -2,41 +2,495 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Toxic Comment Classifier</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; background: #f7f7f7; }
-        .container { background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px #ccc; max-width: 500px; margin: auto; }
-        button { padding: 10px 20px; margin: 10px 0; font-size: 16px; border-radius: 5px; border: none; background: #007bff; color: #fff; cursor: pointer; }
-        button:disabled { background: #aaa; }
-        .metrics { margin-top: 20px; }
-        .status { margin-top: 10px; color: #007bff; }
-    </style>
+        :root {
+            --primary: #4361ee;
+            --primary-light: #5074f5;
+            --primary-dark: #3a56d4;
+            --secondary: #f72585;
+            --background: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #212529;
+            --text-light: #6c757d;
+            --success: #38b000;
+            --danger: #e63946;
+            --warning: #ffaa00;
+            --shadow: rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(120deg, #f3f4f6 0%, #e9ecef 100%);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .app-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+          .app-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+        }
+        
+        .app-subtitle {
+            color: var(--text-light);
+            font-weight: 300;
+            font-size: 1.2rem;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 8px 24px var(--shadow);
+            padding: 30px;
+            margin-bottom: 30px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+        
+        .card-title i {
+            margin-right: 10px;
+            color: var(--primary);
+        }
+        
+        .btn-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+        
+        button, .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        button i, .btn i {
+            margin-right: 8px;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary:active {
+            background: var(--primary-dark);
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: var(--secondary);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: var(--secondary-light);
+            transform: translateY(-2px);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+        
+        .btn-outline:hover {
+            background: rgba(67, 97, 238, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        button:disabled, .btn:disabled {
+            background: #b4b4b4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .status-container {
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(67, 97, 238, 0.1);
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .status-container.hidden {
+            display: none;
+        }
+        
+        .status-container i {
+            margin-right: 10px;
+            font-size: 20px;
+        }
+        
+        .status-container.info {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+        }
+        
+        .status-container.success {
+            background: rgba(56, 176, 0, 0.1);
+            color: var(--success);
+        }
+        
+        .status-container.warning {
+            background: rgba(255, 170, 0, 0.1);
+            color: var(--warning);
+        }
+        
+        .status-container.error {
+            background: rgba(230, 57, 70, 0.1);
+            color: var(--danger);
+        }
+          .metrics-container {
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .info-box {
+            background: rgba(67, 97, 238, 0.05);
+            border-left: 4px solid var(--primary);
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+        
+        .info-box i {
+            color: var(--primary);
+            margin-right: 5px;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 10px 0;
+            color: var(--primary);
+        }
+        
+        .metric-label {
+            font-size: 14px;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+        }
+        
+        table th, table td {
+            padding: 15px;
+            text-align: left;
+        }
+        
+        table th {
+            background-color: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+        
+        table tr:nth-child(even) {
+            background-color: rgba(0, 0, 0, 0.02);
+        }
+        
+        table tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+        }
+        
+        select.form-control {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23464646' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 15px center;
+            background-size: 15px;
+            padding-right: 45px;
+        }
+        
+        textarea.form-control {
+            min-height: 120px;
+            resize: vertical;
+        }
+          .prediction-result {
+            padding: 20px;
+            border-radius: 10px;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-top: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .prediction-result h3 {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            color: var(--primary);
+        }
+        
+        .prediction-result.hidden {
+            display: none;
+        }
+        
+        .prediction-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .prediction-row:last-child {
+            border-bottom: none;
+        }
+        
+        .prediction-label {
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+        
+        .prediction-value {
+            font-weight: 600;
+        }
+        
+        .prediction-value-bar {
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+          .prediction-value-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            transition: width 0.5s ease;
+        }
+        
+        .prediction-value-fill.high-risk {
+            background: linear-gradient(90deg, #ff7e67 0%, #e63946 100%);
+        }
+        
+        .prediction-value-fill.medium-risk {
+            background: linear-gradient(90deg, #ffaa00 0%, #ff7e67 100%);
+        }
+        
+        .prediction-value-fill.low-risk {
+            background: linear-gradient(90deg, #38b000 0%, #70e000 100%);
+        }
+        
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-btn .loader {
+            display: inline-block;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-container {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+            }
+            
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            
+            .app-title {
+                font-size: 2rem;
+            }
+        }    </style>
 </head>
 <body>
-<div class="container">
-    <h2>Toxic Comment Classifier</h2>
-    <button id="trainBtn">Train Model</button>
-    <button id="metricsBtn">View Metrics</button>
-    <button id="optimizeBtn">Optimize Model</button>
-    <button id="compareBtn">Compare Models</button>
-    <div class="status" id="status"></div>
-    <div class="metrics" id="metrics"></div>
-    <div class="metrics" id="compareTable"></div>
+<div class="app-container">    <header class="app-header">
+        <h1 class="app-title">Toxic Comment Classifier</h1>
+        <p class="app-subtitle">Analyze and detect toxic language in text</p>
+    </header>
+    
+    <div class="dashboard-grid">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title"><i class="fas fa-cogs"></i>Model Management</h2>
+            </div>
+            <div class="btn-container">
+                <button id="trainBtn" class="btn btn-primary" title="Train the model on toxic comment dataset"><i class="fas fa-graduation-cap"></i>Train Model</button>
+                <button id="metricsBtn" class="btn btn-outline" title="View model performance metrics"><i class="fas fa-chart-bar"></i>View Metrics</button>
+                <button id="optimizeBtn" class="btn btn-primary" title="Optimize model for better performance"><i class="fas fa-bolt"></i>Optimize Model</button>
+                <button id="compareBtn" class="btn btn-outline" title="Compare original and optimized models"><i class="fas fa-balance-scale"></i>Compare Models</button>
+            </div>
+            <div class="info-box">
+                <p><i class="fas fa-info-circle"></i> Use the Model Management panel to train and optimize the toxic comment classifier. After training, you can view metrics to evaluate model performance.</p>
+            </div>
+            <div id="status" class="status-container info hidden"></div>
+            <div id="metrics" class="metrics-container"></div>
+            <div id="compareTable" class="metrics-container"></div>
+        </div>
 
-    <div style="margin-top: 30px;">
-        <label for="modelSelect"><b>Select Model:</b></label>
-        <select id="modelSelect">
-            <option value="pytorch">PyTorch</option>
-            <option value="onnx">ONNX</option>
-        </select>
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title"><i class="fas fa-search"></i>Toxicity Analysis</h2>
+            </div>
+            <div class="form-group">
+                <label for="modelSelect">Select Model Engine</label>
+                <select id="modelSelect" class="form-control">
+                    <option value="pytorch">PyTorch (Standard)</option>
+                    <option value="onnx">ONNX (Optimized)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="predictInput">Enter Text to Analyze</label>
+                <textarea id="predictInput" class="form-control" placeholder="Type or paste text here to analyze for toxic content..."></textarea>
+            </div>
+            <button id="predictBtn" class="btn btn-secondary"><i class="fas fa-filter"></i>Analyze Text</button>
+            <div class="info-box">
+                <p><i class="fas fa-info-circle"></i> Enter text to analyze its toxicity across multiple categories. The optimized ONNX model offers faster performance.</p>
+            </div>
+            <div id="predictStatus" class="status-container info hidden"></div>
+            <div id="predictResult" class="prediction-result hidden"></div>
+        </div>
     </div>
-    <div style="margin-top: 10px;">
-        <label for="predictInput"><b>Enter Comment:</b></label><br>
-        <textarea id="predictInput" rows="3" style="width: 100%;"></textarea>
-    </div>
-    <button id="predictBtn">Predict</button>
-    <div class="status" id="predictStatus"></div>
-    <div class="metrics" id="predictResult"></div>
+    <!-- Removed the old Training Settings card here -->
 </div>
 <script>
     const trainBtn = document.getElementById('trainBtn');
@@ -46,67 +500,204 @@
     const statusDiv = document.getElementById('status');
     const metricsDiv = document.getElementById('metrics');
     const compareTable = document.getElementById('compareTable');
+    const predictBtn = document.getElementById('predictBtn');
+    const predictInput = document.getElementById('predictInput');
+    const modelSelect = document.getElementById('modelSelect');
+    const predictStatus = document.getElementById('predictStatus');
+    const predictResult = document.getElementById('predictResult');
 
-    trainBtn.onclick = function() {
-        statusDiv.textContent = 'Starting training...';
-        metricsDiv.textContent = '';
-        trainBtn.disabled = true;
-        fetch('/train', {method: 'POST'})
-            .then(res => res.json())
-            .then(data => {
-                statusDiv.textContent = data.message;
-                if (data.status === 'started') {
-                    pollStatus();
-                } else {
-                    trainBtn.disabled = false;
-                }
-            });
-    };
+    // Helper function to show status messages
+    function showStatus(element, message, type = 'info') {
+        element.textContent = message;
+        element.className = `status-container ${type}`;
+        element.innerHTML = `<i class="fas ${getIconForStatus(type)}"></i> ${message}`;
+        element.classList.remove('hidden');
+    }
+
+    function getIconForStatus(type) {
+        switch(type) {
+            case 'success': return 'fa-check-circle';
+            case 'error': return 'fa-exclamation-circle';
+            case 'warning': return 'fa-exclamation-triangle';
+            default: return 'fa-info-circle';
+        }
+    }
+
+    function hideStatus(element) {
+        element.classList.add('hidden');
+    }
+
+    function toggleButtonLoading(button, isLoading) {
+        button.disabled = isLoading;
+        if (isLoading) {
+            button.dataset.originalText = button.innerHTML;
+            button.innerHTML = `<span class="loader"></span> ${button.innerText}`;
+            button.classList.add('loading-btn');
+        } else {
+            if (button.dataset.originalText) {
+                button.innerHTML = button.dataset.originalText;
+            }
+            button.classList.remove('loading-btn');
+        }
+    }
+
+    // Helper function to hide and clear all result containers
+    function clearAllResults() {
+        metricsDiv.innerHTML = '';
+        compareTable.innerHTML = '';
+        hideStatus(statusDiv);
+    }
+
+    // Add a modal for training parameters
+const paramModalHtml = `
+<div id="paramModal" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;z-index:10000;">
+  <div style="background:white;padding:32px 24px 24px 24px;border-radius:12px;min-width:340px;box-shadow:0 8px 32px rgba(0,0,0,0.15);position:relative;">
+    <h3 style="margin-bottom:18px;">Training Parameters</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px 24px;">
+      <div class="form-group"><label for="epochsInput">Epochs</label><input id="epochsInput" class="form-control" type="number" min="1" max="20" value="3" /></div>
+      <div class="form-group"><label for="batchSizeInput">Batch Size</label><input id="batchSizeInput" class="form-control" type="number" min="1" max="128" value="16" /></div>
+      <div class="form-group"><label for="learningRateInput">Learning Rate</label><input id="learningRateInput" class="form-control" type="number" min="0.00001" max="1" step="0.00001" value="0.00002" /></div>
+      <div class="form-group"><label for="nrowsInput">Rows to Train On</label><input id="nrowsInput" class="form-control" type="number" min="100" max="100000" value="1000" /></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
+      <button id="paramCancelBtn" class="btn btn-outline">Cancel</button>
+      <button id="paramSubmitBtn" class="btn btn-primary">Start Training</button>
+    </div>
+  </div>
+</div>`;
+
+let trainParams = null;
+
+trainBtn.onclick = function() {
+    // If params not set, show modal
+    if (!trainParams) {
+        if (!document.getElementById('paramModal')) {
+            document.body.insertAdjacentHTML('beforeend', paramModalHtml);
+            document.getElementById('paramCancelBtn').onclick = function() {
+                document.getElementById('paramModal').remove();
+            };
+            document.getElementById('paramSubmitBtn').onclick = function() {
+                trainParams = {
+                    epochs: parseInt(document.getElementById('epochsInput').value) || 3,
+                    batch_size: parseInt(document.getElementById('batchSizeInput').value) || 16,
+                    learning_rate: parseFloat(document.getElementById('learningRateInput').value) || 0.00002,
+                    nrows: parseInt(document.getElementById('nrowsInput').value) || 1000
+                };
+                document.getElementById('paramModal').remove();
+                trainBtn.click(); // trigger actual training
+            };
+        }
+        return;
+    }
+    // ...existing code for training...
+    clearAllResults();
+    showStatus(statusDiv, 'Starting model training...');
+    metricsDiv.textContent = '';
+    toggleButtonLoading(trainBtn, true);
+    fetch('/train', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trainParams)
+    })
+    .then(res => res.json())
+    .then(data => {
+        showStatus(statusDiv, data.message);
+        if (data.status === 'started') {
+            pollStatus();
+        } else {
+            toggleButtonLoading(trainBtn, false);
+        }
+        trainParams = null;
+    })
+    .catch(error => {
+        showStatus(statusDiv, 'Failed to start training: ' + error.message, 'error');
+        toggleButtonLoading(trainBtn, false);
+        trainParams = null;
+    });
+};
 
     function pollStatus() {
         fetch('/status')
             .then(res => res.json())
             .then(data => {
-                statusDiv.textContent = data.message;
+                showStatus(statusDiv, data.message);
                 if (data.running) {
                     setTimeout(pollStatus, 2000);
                 } else {
-                    trainBtn.disabled = false;
+                    toggleButtonLoading(trainBtn, false);
+                    if (data.message.includes('completed')) {
+                        showStatus(statusDiv, data.message, 'success');
+                    }
                 }
+            })
+            .catch(error => {
+                showStatus(statusDiv, 'Error checking status: ' + error.message, 'error');
+                toggleButtonLoading(trainBtn, false);
             });
     }
 
     metricsBtn.onclick = function() {
-        statusDiv.textContent = '';
-        metricsDiv.textContent = 'Loading metrics...';
+        clearAllResults();
+        hideStatus(statusDiv);
+        metricsDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><span class="loader"></span> Loading metrics...</div>';
+        toggleButtonLoading(metricsBtn, true);
+        
         fetch('/metrics')
             .then(res => res.json())
             .then(data => {
+                toggleButtonLoading(metricsBtn, false);
                 if (data.status === 'ok') {
                     const m = data.metrics;
-                    metricsDiv.innerHTML = `<b>Accuracy:</b> ${m.accuracy}<br>
-                        <b>Precision:</b> ${m.precision}<br>
-                        <b>Recall:</b> ${m.recall}<br>
-                        <b>F1 Score:</b> ${m.f1_score}`;
+                    metricsDiv.innerHTML = `
+                        <h3>Model Performance Metrics</h3>
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-label">Accuracy</div>
+                                <div class="metric-value">${(m.accuracy * 100).toFixed(2)}%</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Precision</div>
+                                <div class="metric-value">${(m.precision * 100).toFixed(2)}%</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Recall</div>
+                                <div class="metric-value">${(m.recall * 100).toFixed(2)}%</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">F1 Score</div>
+                                <div class="metric-value">${(m.f1_score * 100).toFixed(2)}%</div>
+                            </div>
+                        </div>
+                    `;
                 } else {
-                    metricsDiv.textContent = data.message;
+                    metricsDiv.innerHTML = `<div class="status-container warning"><i class="fas fa-exclamation-triangle"></i> ${data.message}</div>`;
                 }
+            })
+            .catch(error => {
+                toggleButtonLoading(metricsBtn, false);
+                metricsDiv.innerHTML = `<div class="status-container error"><i class="fas fa-exclamation-circle"></i> Failed to load metrics: ${error.message}</div>`;
             });
     };
 
     optimizeBtn.onclick = function() {
-        statusDiv.textContent = 'Starting model optimization...';
+        clearAllResults();
+        showStatus(statusDiv, 'Starting model optimization...');
         metricsDiv.textContent = '';
-        optimizeBtn.disabled = true;
+        toggleButtonLoading(optimizeBtn, true);
+        
         fetch('/optimize', {method: 'POST'})
             .then(res => res.json())
             .then(data => {
-                statusDiv.textContent = data.message;
+                showStatus(statusDiv, data.message);
                 if (data.status === 'started') {
                     pollOptimizationStatus();
                 } else {
-                    optimizeBtn.disabled = false;
+                    toggleButtonLoading(optimizeBtn, false);
                 }
+            })
+            .catch(error => {
+                showStatus(statusDiv, 'Failed to start optimization: ' + error.message, 'error');
+                toggleButtonLoading(optimizeBtn, false);
             });
     };
 
@@ -114,35 +705,41 @@
         fetch('/optimization_status')
             .then(res => res.json())
             .then(function(data) {
+                showStatus(statusDiv, data.message);
                 if (data.running) {
-                    statusDiv.textContent = data.message;
                     setTimeout(pollOptimizationStatus, 2000);
                 } else {
-                    optimizeBtn.disabled = false;
+                    toggleButtonLoading(optimizeBtn, false);
                     if (data.result) {
-                        statusDiv.textContent = '';
-                        metricsDiv.innerHTML = '<b>Model optimization completed successfully.</b>';
+                        hideStatus(statusDiv);
+                        metricsDiv.innerHTML = `
+                            <div class="status-container success">
+                                <i class="fas fa-check-circle"></i> 
+                                <strong>Model optimization completed successfully!</strong>
+                            </div>
+                        `;
                     }
                 }
+            })
+            .catch(error => {
+                showStatus(statusDiv, 'Error checking optimization status: ' + error.message, 'error');
+                toggleButtonLoading(optimizeBtn, false);
             });
     }
-
-    const predictBtn = document.getElementById('predictBtn');
-    const predictInput = document.getElementById('predictInput');
-    const modelSelect = document.getElementById('modelSelect');
-    const predictStatus = document.getElementById('predictStatus');
-    const predictResult = document.getElementById('predictResult');
 
     predictBtn.onclick = function() {
         const text = predictInput.value.trim();
         const model = modelSelect.value;
+        
         if (!text) {
-            predictStatus.textContent = 'Please enter a comment.';
+            showStatus(predictStatus, 'Please enter text to analyze', 'warning');
             return;
         }
-        predictStatus.textContent = 'Predicting...';
-        predictResult.textContent = '';
-        predictBtn.disabled = true;
+        
+        showStatus(predictStatus, 'Analyzing text...');
+        predictResult.classList.add('hidden');
+        toggleButtonLoading(predictBtn, true);
+        
         fetch('/predict', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -150,46 +747,91 @@
         })
         .then(res => res.json())
         .then(data => {
-            predictStatus.textContent = data.message || '';
+            toggleButtonLoading(predictBtn, false);
+            
             if (data.status === 'ok') {
-                let html = '';
+                hideStatus(predictStatus);
+                let html = '<h3>Analysis Results</h3>';
+                
                 for (const [label, prob] of Object.entries(data.prediction)) {
-                    html += `<b>${label}:</b> ${prob}<br>`;
+                    const formattedLabel = label.replace(/_/g, ' ');
+                    const percentage = (prob * 100).toFixed(1);
+                    const barWidth = `${Math.max(percentage, 2)}%`;
+                    const colorClass = percentage > 50 ? 'high-risk' : percentage > 25 ? 'medium-risk' : 'low-risk';
+                    
+                    html += `
+                        <div class="prediction-row">
+                            <div>
+                                <div class="prediction-label">${formattedLabel}</div>
+                                <div class="prediction-value-bar">
+                                    <div class="prediction-value-fill ${colorClass}" style="width: ${barWidth}"></div>
+                                </div>
+                            </div>
+                            <div class="prediction-value">${percentage}%</div>
+                        </div>
+                    `;
                 }
+                
                 predictResult.innerHTML = html;
+                predictResult.classList.remove('hidden');
             } else {
-                predictResult.textContent = data.error || data.message;
+                showStatus(predictStatus, data.message || 'Prediction failed', 'error');
             }
-            predictBtn.disabled = false;
         })
-        .catch(() => {
-            predictStatus.textContent = 'Prediction failed.';
-            predictBtn.disabled = false;
+        .catch(error => {
+            toggleButtonLoading(predictBtn, false);
+            showStatus(predictStatus, 'Prediction failed: ' + error.message, 'error');
         });
     };
 
     compareBtn.onclick = function() {
+        clearAllResults();
         compareBtn.disabled = true;
-        compareTable.innerHTML = 'Comparing models...';
+        compareTable.innerHTML = '<div style="text-align: center; padding: 20px;"><span class="loader"></span> Comparing models...</div>';
+        toggleButtonLoading(compareBtn, true);
+        
         fetch('/compare_models')
             .then(res => res.json())
             .then(data => {
-                compareBtn.disabled = false;
+                toggleButtonLoading(compareBtn, false);
+                
                 if (data.status === 'ok') {
-                    const rows = data.results.map(row =>
-                        `<tr><td>${row.model}</td><td>${row.size_mb}</td><td>${row.inference_ms}</td></tr>`
-                    ).join('');
-                    compareTable.innerHTML = `<table border="1" style="width:100%;margin-top:10px;text-align:center;">
-                        <tr><th>Model</th><th>Size (MB)</th><th>Avg Inference Time (ms)</th></tr>
-                        ${rows}
-                    </table>`;
+                    let html = '<h3>Model Comparison</h3>';
+                    html += `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Model Type</th>
+                                    <th>Size (MB)</th>
+                                    <th>Inference Time (ms)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    data.results.forEach(row => {
+                        html += `
+                            <tr>
+                                <td><strong>${row.model}</strong></td>
+                                <td>${row.size_mb}</td>
+                                <td>${row.inference_ms}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `
+                            </tbody>
+                        </table>
+                    `;
+                    
+                    compareTable.innerHTML = html;
                 } else {
-                    compareTable.textContent = data.message;
+                    compareTable.innerHTML = `<div class="status-container warning"><i class="fas fa-exclamation-triangle"></i> ${data.message || 'Comparison failed'}</div>`;
                 }
             })
-            .catch(() => {
-                compareBtn.disabled = false;
-                compareTable.textContent = 'Comparison failed.';
+            .catch(error => {
+                toggleButtonLoading(compareBtn, false);
+                compareTable.innerHTML = `<div class="status-container error"><i class="fas fa-exclamation-circle"></i> Comparison failed: ${error.message}</div>`;
             });
     };
 </script>

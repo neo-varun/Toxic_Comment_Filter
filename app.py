@@ -44,7 +44,31 @@ def index():
 def train():
     if training_status['running']:
         return jsonify({'status': 'error', 'message': 'Training already in progress.'}), 409
-    thread = threading.Thread(target=train_model_thread)
+    # Get hyperparameters from request
+    data = request.get_json() or {}
+    epochs = int(data.get('epochs', 3))
+    batch_size = int(data.get('batch_size', 16))
+    learning_rate = float(data.get('learning_rate', 2e-5))
+    nrows = int(data.get('nrows', 1000))
+    def train_model_thread_custom():
+        global training_status
+        training_status['running'] = True
+        training_status['message'] = 'Training in progress...'
+        try:
+            classifier = ToxicCommentClassifier(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate)
+            classifier.load_data(nrows=nrows)
+            classifier.initialize_model()
+            classifier.train()
+            if not os.path.exists('metrics'):
+                os.makedirs('metrics')
+            with open('metrics/metrics.json', 'w') as f:
+                json.dump(classifier.metrics, f)
+            training_status['message'] = 'Training completed.'
+        except Exception as e:
+            training_status['message'] = f'Error: {str(e)}'
+        finally:
+            training_status['running'] = False
+    thread = threading.Thread(target=train_model_thread_custom)
     thread.start()
     return jsonify({'status': 'started', 'message': 'Training started.'})
 
@@ -125,7 +149,8 @@ def predict_onnx(text):
     processor = ToxicCommentProcessor()
     tokenizer = processor.tokenizer
     session = get_onnx_session()
-    inputs = tokenizer(text, return_tensors='np', padding='max_length', truncation=True, max_length=processor.max_length)
+    # Force max_length=128 to match ONNX export
+    inputs = tokenizer(text, return_tensors='np', padding='max_length', truncation=True, max_length=128)
     ort_inputs = {k: v.astype(np.int64) for k, v in inputs.items()}
     logits = session.run(None, ort_inputs)[0]
     probs = 1 / (1 + np.exp(-logits))[0]
