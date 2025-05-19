@@ -18,8 +18,10 @@
     <button id="trainBtn">Train Model</button>
     <button id="metricsBtn">View Metrics</button>
     <button id="optimizeBtn">Optimize Model</button>
+    <button id="compareBtn">Compare Models</button>
     <div class="status" id="status"></div>
     <div class="metrics" id="metrics"></div>
+    <div class="metrics" id="compareTable"></div>
 
     <div style="margin-top: 30px;">
         <label for="modelSelect"><b>Select Model:</b></label>
@@ -40,8 +42,10 @@
     const trainBtn = document.getElementById('trainBtn');
     const metricsBtn = document.getElementById('metricsBtn');
     const optimizeBtn = document.getElementById('optimizeBtn');
+    const compareBtn = document.getElementById('compareBtn');
     const statusDiv = document.getElementById('status');
     const metricsDiv = document.getElementById('metrics');
+    const compareTable = document.getElementById('compareTable');
 
     trainBtn.onclick = function() {
         statusDiv.textContent = 'Starting training...';
@@ -109,17 +113,15 @@
     function pollOptimizationStatus() {
         fetch('/optimization_status')
             .then(res => res.json())
-            .then(data => {
-                statusDiv.textContent = data.message;
+            .then(function(data) {
                 if (data.running) {
+                    statusDiv.textContent = data.message;
                     setTimeout(pollOptimizationStatus, 2000);
                 } else {
                     optimizeBtn.disabled = false;
                     if (data.result) {
-                        metricsDiv.innerHTML = `<b>Original Model Path:</b> ${data.result.original_model_path}<br>
-                            <b>Optimized Model Path:</b> ${data.result.optimized_model_path}<br>
-                            <b>ONNX Path:</b> ${data.result.onnx_path}<br>
-                            <b>Original Size (MB):</b> ${data.result.original_size_mb.toFixed(2)}`;
+                        statusDiv.textContent = '';
+                        metricsDiv.innerHTML = '<b>Model optimization completed successfully.</b>';
                     }
                 }
             });
@@ -164,6 +166,31 @@
             predictStatus.textContent = 'Prediction failed.';
             predictBtn.disabled = false;
         });
+    };
+
+    compareBtn.onclick = function() {
+        compareBtn.disabled = true;
+        compareTable.innerHTML = 'Comparing models...';
+        fetch('/compare_models')
+            .then(res => res.json())
+            .then(data => {
+                compareBtn.disabled = false;
+                if (data.status === 'ok') {
+                    const rows = data.results.map(row =>
+                        `<tr><td>${row.model}</td><td>${row.size_mb}</td><td>${row.inference_ms}</td></tr>`
+                    ).join('');
+                    compareTable.innerHTML = `<table border="1" style="width:100%;margin-top:10px;text-align:center;">
+                        <tr><th>Model</th><th>Size (MB)</th><th>Avg Inference Time (ms)</th></tr>
+                        ${rows}
+                    </table>`;
+                } else {
+                    compareTable.textContent = data.message;
+                }
+            })
+            .catch(() => {
+                compareBtn.disabled = false;
+                compareTable.textContent = 'Comparison failed.';
+            });
     };
 </script>
 </body>

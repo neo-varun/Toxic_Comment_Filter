@@ -149,5 +149,73 @@ def predict():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route('/compare_models', methods=['GET'])
+def compare_models():
+    import time
+    results = []
+    # PyTorch model
+    pt_path = 'models/distilbert-base-uncased_final.pt'
+    pt_size = os.path.getsize(pt_path) / (1024 * 1024) if os.path.exists(pt_path) else None
+    pt_time = None
+    if pt_size is not None:
+        try:
+            processor = ToxicCommentProcessor()
+            tokenizer = processor.tokenizer
+            model = DistilBertForSequenceClassification.from_pretrained(
+                'distilbert-base-uncased', num_labels=6, problem_type="multi_label_classification"
+            )
+            checkpoint = torch.load(pt_path, map_location='cpu')
+            if 'model_state_dict' in checkpoint:
+                model.load_state_dict(checkpoint['model_state_dict'])
+            model.eval()
+            dummy = tokenizer("This is a test comment.", return_tensors='pt', padding='max_length', truncation=True, max_length=128)
+            with torch.no_grad():
+                # Warmup
+                for _ in range(2):
+                    _ = model(**dummy)
+                start = time.time()
+                for _ in range(20):
+                    _ = model(**dummy)
+                end = time.time()
+                pt_time = ((end - start) / 20) * 1000  # ms
+        except Exception as e:
+            pt_time = None
+    results.append({
+        'model': 'PyTorch',
+        'size_mb': f"{pt_size:.2f}" if pt_size is not None else 'N/A',
+        'inference_ms': f"{pt_time:.2f}" if pt_time is not None else 'N/A'
+    })
+    # ONNX model
+    onnx_path = 'models/distilbert-base-uncased_optimized.onnx'
+    onnx_size = os.path.getsize(onnx_path) / (1024 * 1024) if os.path.exists(onnx_path) else None
+    onnx_time = None
+    if onnx_size is not None:
+        try:
+            import onnxruntime as ort
+            processor = ToxicCommentProcessor()
+            tokenizer = processor.tokenizer
+            session = ort.InferenceSession(onnx_path, providers=['CPUExecutionProvider'])
+            dummy = tokenizer("This is a test comment.", return_tensors='np', padding='max_length', truncation=True, max_length=128)
+            ort_inputs = {k: v.astype(np.int64) for k, v in dummy.items() if k in ["input_ids", "attention_mask"]}
+            # Warmup
+            for _ in range(2):
+                _ = session.run(None, ort_inputs)
+            import time
+            start = time.time()
+            for _ in range(20):
+                _ = session.run(None, ort_inputs)
+            end = time.time()
+            onnx_time = ((end - start) / 20) * 1000  # ms
+        except Exception as e:
+            onnx_time = str(e)
+    results.append({
+        'model': 'ONNX',
+        'size_mb': f"{onnx_size:.2f}" if onnx_size is not None else 'N/A',
+        'inference_ms': f"{onnx_time:.2f}" if isinstance(onnx_time, float) else (onnx_time or 'N/A')
+    })
+    if all(r['size_mb'] == 'N/A' for r in results):
+        return jsonify({'status': 'error', 'message': 'No models found to compare.'}), 404
+    return jsonify({'status': 'ok', 'results': results})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=True)
